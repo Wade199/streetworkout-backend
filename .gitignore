@@ -44,6 +44,7 @@ Thumbs.db
 *.log
 logs/
 
-# ⚠️ NE JAMAIS COMMITTER application.properties avec les vrais mots de passe
-# Décommente la ligne suivante si tu veux ignorer le fichier de config
-# src/main/resources/application.properties
+# ⚠️ SÉCURITÉ : application.properties contient des secrets (BDD, JWT)
+# Il ne doit JAMAIS être poussé sur GitHub
+# Utilise application.properties.example comme modèle
+src/main/resources/application.properties

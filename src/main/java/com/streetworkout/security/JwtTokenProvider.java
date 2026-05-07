@@ -9,18 +9,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
  * Composant responsable de la création, validation et extraction des JWT.
- *
- * Un JWT (JSON Web Token) est composé de 3 parties séparées par des points :
- *   Header.Payload.Signature
- *
- * - Header : algorithme de signature (HS256)
- * - Payload : données (userId, email, expiration)
- * - Signature : garantit l'intégrité du token
+ * Sécurité renforcée : clé encodée en UTF-8, algorithme HS256, logs sans données sensibles.
  */
 @Component
 public class JwtTokenProvider {
@@ -34,15 +29,15 @@ public class JwtTokenProvider {
     private long jwtExpirationMs;
 
     /**
-     * Génère la clé de signature à partir du secret configuré.
+     * Génère la clé de signature HMAC-SHA256.
+     * Utilise UTF-8 pour garantir la cohérence entre les environnements.
      */
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
      * Génère un token JWT à partir de l'objet Authentication de Spring Security.
-     * Appelé après une connexion réussie.
      */
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -51,7 +46,6 @@ public class JwtTokenProvider {
 
     /**
      * Génère un token JWT directement depuis un email.
-     * Utilisé lors de l'inscription.
      */
     public String generateTokenFromEmail(String email) {
         return buildToken(email);
@@ -62,15 +56,15 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
-            .setSubject(subject)          // email de l'utilisateur
-            .setIssuedAt(now)             // date de création
-            .setExpiration(expiryDate)    // date d'expiration (24h par défaut)
+            .setSubject(subject)
+            .setIssuedAt(now)
+            .setExpiration(expiryDate)
             .signWith(getSigningKey(), SignatureAlgorithm.HS256)
             .compact();
     }
 
     /**
-     * Extrait l'email (subject) depuis un token JWT.
+     * Extrait l'email depuis un token JWT.
      */
     public String getEmailFromToken(String token) {
         return Jwts.parserBuilder()
@@ -83,7 +77,7 @@ public class JwtTokenProvider {
 
     /**
      * Valide un token JWT.
-     * Retourne true si le token est valide, false sinon.
+     * Les logs ne contiennent jamais le token lui-même pour éviter les fuites.
      */
     public boolean validateToken(String token) {
         try {
@@ -93,13 +87,15 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token);
             return true;
         } catch (MalformedJwtException e) {
-            logger.error("Token JWT invalide : {}", e.getMessage());
+            logger.warn("Token JWT malformé");
         } catch (ExpiredJwtException e) {
-            logger.error("Token JWT expiré : {}", e.getMessage());
+            logger.warn("Token JWT expiré");
         } catch (UnsupportedJwtException e) {
-            logger.error("Token JWT non supporté : {}", e.getMessage());
+            logger.warn("Token JWT non supporté");
         } catch (IllegalArgumentException e) {
-            logger.error("JWT claims vide : {}", e.getMessage());
+            logger.warn("Token JWT vide ou null");
+        } catch (Exception e) {
+            logger.warn("Erreur de validation JWT");
         }
         return false;
     }
