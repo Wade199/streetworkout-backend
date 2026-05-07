@@ -1,0 +1,30 @@
+# ===================================================
+# EXEMPLE DE CONFIGURATION - Copier en application.properties
+# et adapter les valeurs
+# ===================================================
+
+spring.application.name=StreetWorkout API
+server.port=8080
+
+# Base de données PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/streetworkout?characterEncoding=UTF-8
+spring.datasource.username=postgres
+spring.datasource.password=VOTRE_MOT_DE_PASSE_ICI
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# JWT
+jwt.secret=VOTRE_SECRET_JWT_DE_MINIMUM_256_BITS_ICI
+jwt.expiration=86400000
+
+# CORS
+cors.allowed-origins=http://localhost:4200,http://localhost:3000
+
+# Logging
+logging.level.com.streetworkout=DEBUG
+logging.level.org.springframework.security=DEBUG
