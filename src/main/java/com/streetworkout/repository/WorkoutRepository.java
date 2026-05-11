@@ -13,25 +13,36 @@ import java.util.Optional;
 @Repository
 public interface WorkoutRepository extends JpaRepository<Workout, Long> {
 
-    // Toutes les séances d'un utilisateur, triées par date décroissante
-    List<Workout> findByUserIdOrderByWorkoutDateDesc(Long userId);
+    @Query("SELECT DISTINCT w FROM Workout w " +
+           "LEFT JOIN FETCH w.workoutExercises we " +
+           "LEFT JOIN FETCH we.exercise " +
+           "WHERE w.user.id = :userId " +
+           "ORDER BY w.workoutDate DESC")
+    List<Workout> findByUserIdOrderByWorkoutDateDesc(@Param("userId") Long userId);
 
-    // Séances d'un utilisateur entre deux dates
+    @Query("SELECT DISTINCT w FROM Workout w " +
+           "LEFT JOIN FETCH w.workoutExercises we " +
+           "LEFT JOIN FETCH we.exercise " +
+           "WHERE w.user.id = :userId " +
+           "AND w.workoutDate BETWEEN :startDate AND :endDate " +
+           "ORDER BY w.workoutDate DESC")
     List<Workout> findByUserIdAndWorkoutDateBetweenOrderByWorkoutDateDesc(
-        Long userId, LocalDate startDate, LocalDate endDate
+        @Param("userId") Long userId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
     );
 
-    // Vérifier qu'une séance appartient bien à un utilisateur
-    Optional<Workout> findByIdAndUserId(Long id, Long userId);
+    @Query("SELECT w FROM Workout w " +
+           "LEFT JOIN FETCH w.workoutExercises we " +
+           "LEFT JOIN FETCH we.exercise " +
+           "WHERE w.id = :id AND w.user.id = :userId")
+    Optional<Workout> findByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 
-    // Compter les séances d'un utilisateur
     long countByUserId(Long userId);
 
-    // Statistiques : total des calories brûlées
     @Query("SELECT COALESCE(SUM(w.totalCalories), 0) FROM Workout w WHERE w.user.id = :userId")
     Integer sumCaloriesByUserId(@Param("userId") Long userId);
 
-    // Statistiques : total des minutes d'entraînement
     @Query("SELECT COALESCE(SUM(w.duration), 0) FROM Workout w WHERE w.user.id = :userId")
     Integer sumDurationByUserId(@Param("userId") Long userId);
 }
