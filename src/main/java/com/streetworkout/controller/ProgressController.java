@@ -2,6 +2,7 @@ package com.streetworkout.controller;
 
 import com.streetworkout.dto.ProgressRequest;
 import com.streetworkout.dto.ProgressResponse;
+import com.streetworkout.dto.ProgressStatsResponse;
 import com.streetworkout.service.ProgressService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,15 +15,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Controller du suivi de progression (poids, notes).
- *
- * Toutes les routes nécessitent un JWT valide.
+ * Controller du suivi de progression.
  *
  * Routes :
- *   GET    /api/progress              → Mon historique
- *   POST   /api/progress              → Ajouter une entrée
- *   PUT    /api/progress/{id}         → Modifier une entrée
- *   DELETE /api/progress/{id}         → Supprimer une entrée
+ *   GET    /api/progress              → Historique (liste)
+ *   GET    /api/progress/stats        → Statistiques pour graphique
+ *   POST   /api/progress              → Ajouter une entree
+ *   PUT    /api/progress/{id}         → Modifier une entree
+ *   DELETE /api/progress/{id}         → Supprimer une entree
  */
 @RestController
 @RequestMapping("/api/progress")
@@ -32,11 +32,10 @@ public class ProgressController {
     private ProgressService progressService;
 
     /**
-     * Récupère l'historique de progression de l'utilisateur connecté.
+     * Historique de progression (liste brute).
      *
-     * Paramètres optionnels :
-     * - startDate : date de début (format ISO : 2024-01-01)
-     * - endDate   : date de fin   (format ISO : 2024-12-31)
+     * GET /api/progress
+     * GET /api/progress?startDate=2024-01-01&endDate=2024-12-31
      */
     @GetMapping
     public ResponseEntity<List<ProgressResponse>> getMyProgress(
@@ -47,25 +46,48 @@ public class ProgressController {
     }
 
     /**
-     * Ajoute une entrée de progression.
+     * Statistiques de progression pour le graphique d'evolution du poids.
      *
-     * Body JSON :
+     * GET /api/progress/stats
+     * GET /api/progress/stats?startDate=2024-01-01&endDate=2024-12-31
+     *
+     * Reponse :
      * {
-     *   "progressDate": "2024-01-15",
-     *   "weight": 74.5,
-     *   "notes": "Je me sens plus léger !"
+     *   "entries": [
+     *     { "id": 1, "progressDate": "2024-01-01", "weight": 80.0, "notes": "..." },
+     *     { "id": 2, "progressDate": "2024-01-15", "weight": 79.2, "notes": "..." }
+     *   ],
+     *   "currentWeight": 79.2,
+     *   "minWeight": 79.2,
+     *   "maxWeight": 80.0,
+     *   "weightChange": -0.80,
+     *   "weightChangePct": -1.00,
+     *   "totalEntries": 2
      * }
      *
-     * Contrainte : une seule entrée par date par utilisateur.
+     * Les entries sont triees par date ASC pour l'axe X du graphique.
      */
-    @PostMapping
-    public ResponseEntity<ProgressResponse> create(@Valid @RequestBody ProgressRequest request) {
-        ProgressResponse response = progressService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @GetMapping("/stats")
+    public ResponseEntity<ProgressStatsResponse> getStats(
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(progressService.getStats(startDate, endDate));
     }
 
     /**
-     * Met à jour une entrée de progression existante.
+     * Ajoute une entree de progression.
+     *
+     * POST /api/progress
+     * Body : { "progressDate": "2024-01-15", "weight": 74.5, "notes": "..." }
+     */
+    @PostMapping
+    public ResponseEntity<ProgressResponse> create(@Valid @RequestBody ProgressRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(progressService.create(request));
+    }
+
+    /**
+     * Met a jour une entree de progression.
      */
     @PutMapping("/{id}")
     public ResponseEntity<ProgressResponse> update(
@@ -76,7 +98,7 @@ public class ProgressController {
     }
 
     /**
-     * Supprime une entrée de progression.
+     * Supprime une entree de progression.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

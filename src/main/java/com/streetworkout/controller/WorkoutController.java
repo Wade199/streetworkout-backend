@@ -1,5 +1,6 @@
 package com.streetworkout.controller;
 
+import com.streetworkout.dto.PageResponse;
 import com.streetworkout.dto.WorkoutRequest;
 import com.streetworkout.dto.WorkoutResponse;
 import com.streetworkout.service.WorkoutService;
@@ -11,22 +12,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Controller des séances d'entraînement.
- *
- * Toutes les routes nécessitent un JWT valide.
- * Chaque utilisateur ne voit que SES propres séances.
+ * Controller des seances d'entrainement.
  *
  * Routes :
- *   GET    /api/workouts              → Mes séances
- *   GET    /api/workouts/{id}         → Une séance
- *   POST   /api/workouts              → Créer une séance
- *   PUT    /api/workouts/{id}         → Modifier une séance
- *   DELETE /api/workouts/{id}         → Supprimer une séance
+ *   GET    /api/workouts              → Mes seances (paginées)
  *   GET    /api/workouts/stats        → Mes statistiques
+ *   GET    /api/workouts/{id}         → Une seance
+ *   POST   /api/workouts              → Creer une seance
+ *   PUT    /api/workouts/{id}         → Modifier une seance
+ *   DELETE /api/workouts/{id}         → Supprimer une seance
  */
 @RestController
 @RequestMapping("/api/workouts")
@@ -36,31 +33,45 @@ public class WorkoutController {
     private WorkoutService workoutService;
 
     /**
-     * Récupère toutes les séances de l'utilisateur connecté.
+     * Recupere les seances de l'utilisateur avec pagination.
      *
-     * Paramètres optionnels :
-     * - startDate : date de début (format ISO : 2024-01-01)
-     * - endDate   : date de fin   (format ISO : 2024-12-31)
+     * GET /api/workouts?page=0&size=10
+     * GET /api/workouts?page=0&size=10&startDate=2024-01-01&endDate=2024-12-31
      *
-     * Exemple : GET /api/workouts?startDate=2024-01-01&endDate=2024-12-31
+     * Parametres :
+     * - page      : numero de page (defaut 0)
+     * - size      : nombre d'elements par page (defaut 10, max 50)
+     * - startDate : filtre date debut (optionnel)
+     * - endDate   : filtre date fin (optionnel)
+     *
+     * Reponse :
+     * {
+     *   "content": [...],
+     *   "page": 0,
+     *   "size": 10,
+     *   "totalElements": 42,
+     *   "totalPages": 5,
+     *   "first": true,
+     *   "last": false
+     * }
      */
     @GetMapping
-    public ResponseEntity<List<WorkoutResponse>> getMyWorkouts(
+    public ResponseEntity<PageResponse<WorkoutResponse>> getMyWorkouts(
+        @RequestParam(defaultValue = "0")  int page,
+        @RequestParam(defaultValue = "10") int size,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        return ResponseEntity.ok(workoutService.getMyWorkouts(startDate, endDate));
+        // Limiter la taille max a 50 pour eviter les surcharges
+        size = Math.min(size, 50);
+        return ResponseEntity.ok(workoutService.getMyWorkouts(page, size, startDate, endDate));
     }
 
     /**
-     * Récupère les statistiques globales de l'utilisateur.
+     * Statistiques globales de l'utilisateur.
      *
-     * Réponse :
-     * {
-     *   "totalWorkouts": 42,
-     *   "totalCalories": 15000,
-     *   "totalMinutes": 2100
-     * }
+     * GET /api/workouts/stats
+     * Reponse : { "totalWorkouts": 42, "totalCalories": 15000, "totalMinutes": 2100 }
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
@@ -68,7 +79,7 @@ public class WorkoutController {
     }
 
     /**
-     * Récupère une séance par son ID.
+     * Recupere une seance par son ID.
      */
     @GetMapping("/{id}")
     public ResponseEntity<WorkoutResponse> getById(@PathVariable Long id) {
@@ -76,15 +87,16 @@ public class WorkoutController {
     }
 
     /**
-     * Crée une nouvelle séance.
+     * Cree une nouvelle seance.
      *
-     * Body JSON :
+     * POST /api/workouts
+     * Body :
      * {
-     *   "title": "Séance Push du lundi",
+     *   "title": "Seance Push du lundi",
      *   "workoutDate": "2024-01-15",
      *   "duration": 45,
      *   "totalCalories": 300,
-     *   "notes": "Bonne séance !",
+     *   "notes": "Bonne seance !",
      *   "exercises": [
      *     { "exerciseId": 1, "sets": 3, "reps": 15 },
      *     { "exerciseId": 4, "sets": 3, "reps": 10 }
@@ -93,13 +105,11 @@ public class WorkoutController {
      */
     @PostMapping
     public ResponseEntity<WorkoutResponse> create(@Valid @RequestBody WorkoutRequest request) {
-        WorkoutResponse response = workoutService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(workoutService.create(request));
     }
 
     /**
-     * Met à jour une séance existante.
-     * Remplace complètement les exercices de la séance.
+     * Met a jour une seance existante.
      */
     @PutMapping("/{id}")
     public ResponseEntity<WorkoutResponse> update(
@@ -110,7 +120,7 @@ public class WorkoutController {
     }
 
     /**
-     * Supprime une séance et tous ses exercices associés.
+     * Supprime une seance et ses exercices en cascade.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

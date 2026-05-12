@@ -1,5 +1,6 @@
 package com.streetworkout.service;
 
+import com.streetworkout.dto.PageResponse;
 import com.streetworkout.dto.WorkoutRequest;
 import com.streetworkout.dto.WorkoutResponse;
 import com.streetworkout.entity.Exercise;
@@ -29,17 +30,35 @@ public class WorkoutService {
     @Autowired
     private UserService userService;
 
+    /**
+     * Retourne les seances de l utilisateur avec pagination.
+     * Strategie "IDs first" : recupere les IDs pagines, puis charge les entites completes.
+     * Evite le probleme HHH90003004 (JOIN FETCH incompatible avec LIMIT en JPQL).
+     */
     @Transactional(readOnly = true)
-    public List<WorkoutResponse> getMyWorkouts(LocalDate startDate, LocalDate endDate) {
+    public PageResponse<WorkoutResponse> getMyWorkouts(int page, int size,
+                                                        LocalDate startDate, LocalDate endDate) {
         User user = userService.getCurrentUser();
-        List<Workout> workouts;
+        int offset = page * size;
+
+        List<Long> ids;
+        long total;
+
         if (startDate != null && endDate != null) {
-            workouts = workoutRepository.findByUserIdAndWorkoutDateBetweenOrderByWorkoutDateDesc(
-                user.getId(), startDate, endDate);
+            ids   = workoutRepository.findIdsByUserIdAndDateRangePaged(user.getId(), startDate, endDate, size, offset);
+            total = workoutRepository.countByUserIdAndDateRange(user.getId(), startDate, endDate);
         } else {
-            workouts = workoutRepository.findByUserIdOrderByWorkoutDateDesc(user.getId());
+            ids   = workoutRepository.findIdsByUserIdPaged(user.getId(), size, offset);
+            total = workoutRepository.countByUserId(user.getId());
         }
-        return workouts.stream().map(WorkoutResponse::fromEntity).collect(Collectors.toList());
+
+        List<WorkoutResponse> content = ids.isEmpty()
+            ? List.of()
+            : workoutRepository.findByIdsWithExercises(ids).stream()
+                .map(WorkoutResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        return PageResponse.of(content, page, size, total);
     }
 
     @Transactional(readOnly = true)

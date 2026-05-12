@@ -11,8 +11,11 @@ import java.util.Optional;
 @Repository
 public interface ProgressRepository extends JpaRepository<Progress, Long> {
 
-    // Tout l'historique de progression d'un utilisateur, trié par date
+    // Tout l'historique de progression d'un utilisateur, trié par date DESC
     List<Progress> findByUserIdOrderByProgressDateDesc(Long userId);
+
+    // Tout l'historique trié par date ASC (pour le graphique — axe X = temps)
+    List<Progress> findByUserIdOrderByProgressDateAsc(Long userId);
 
     // Progression entre deux dates
     List<Progress> findByUserIdAndProgressDateBetweenOrderByProgressDateAsc(

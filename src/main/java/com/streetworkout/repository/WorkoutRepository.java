@@ -20,6 +20,49 @@ public interface WorkoutRepository extends JpaRepository<Workout, Long> {
            "ORDER BY w.workoutDate DESC")
     List<Workout> findByUserIdOrderByWorkoutDateDesc(@Param("userId") Long userId);
 
+    /**
+     * Pagination : IDs des seances d'un utilisateur (evite le probleme HHH90003004
+     * avec JOIN FETCH + LIMIT).
+     * On recupere d'abord les IDs pagines, puis on charge les entites completes.
+     */
+    @Query(value = "SELECT w.id FROM workouts w WHERE w.user_id = :userId ORDER BY w.workout_date DESC LIMIT :size OFFSET :offset",
+           nativeQuery = true)
+    List<Long> findIdsByUserIdPaged(@Param("userId") Long userId,
+                                    @Param("size") int size,
+                                    @Param("offset") int offset);
+
+    /**
+     * Compte total des seances d'un utilisateur (pour la pagination).
+     */
+    @Query("SELECT COUNT(w) FROM Workout w WHERE w.user.id = :userId")
+    long countByUserIdQuery(@Param("userId") Long userId);
+
+    /**
+     * Pagination avec filtre de dates.
+     */
+    @Query(value = "SELECT w.id FROM workouts w WHERE w.user_id = :userId AND w.workout_date BETWEEN :startDate AND :endDate ORDER BY w.workout_date DESC LIMIT :size OFFSET :offset",
+           nativeQuery = true)
+    List<Long> findIdsByUserIdAndDateRangePaged(@Param("userId") Long userId,
+                                                @Param("startDate") LocalDate startDate,
+                                                @Param("endDate") LocalDate endDate,
+                                                @Param("size") int size,
+                                                @Param("offset") int offset);
+
+    @Query("SELECT COUNT(w) FROM Workout w WHERE w.user.id = :userId AND w.workoutDate BETWEEN :startDate AND :endDate")
+    long countByUserIdAndDateRange(@Param("userId") Long userId,
+                                   @Param("startDate") LocalDate startDate,
+                                   @Param("endDate") LocalDate endDate);
+
+    /**
+     * Charge les seances completes (avec exercices) par liste d'IDs.
+     */
+    @Query("SELECT DISTINCT w FROM Workout w " +
+           "LEFT JOIN FETCH w.workoutExercises we " +
+           "LEFT JOIN FETCH we.exercise " +
+           "WHERE w.id IN :ids " +
+           "ORDER BY w.workoutDate DESC")
+    List<Workout> findByIdsWithExercises(@Param("ids") List<Long> ids);
+
     @Query("SELECT DISTINCT w FROM Workout w " +
            "LEFT JOIN FETCH w.workoutExercises we " +
            "LEFT JOIN FETCH we.exercise " +

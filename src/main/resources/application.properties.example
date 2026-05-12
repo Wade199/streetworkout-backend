@@ -1,30 +1,40 @@
 # ===================================================
-# EXEMPLE DE CONFIGURATION - Copier en application.properties
-# et adapter les valeurs
+# EXEMPLE DE CONFIGURATION — Copier en application.properties
+# Remplacer toutes les valeurs VOTRE_*
 # ===================================================
 
 spring.application.name=StreetWorkout API
 server.port=8080
 
-# Base de données PostgreSQL
+# Base de donnees PostgreSQL
 spring.datasource.url=jdbc:postgresql://localhost:5432/streetworkout?characterEncoding=UTF-8
 spring.datasource.username=postgres
-spring.datasource.password=VOTRE_MOT_DE_PASSE_ICI
-spring.datasource.driver-class-name=org.postgresql.Driver
+spring.datasource.password=VOTRE_MOT_DE_PASSE_POSTGRESQL
+
+# Connection pool
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=2
+spring.datasource.hikari.connection-timeout=30000
 
 # JPA / Hibernate
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.open-in-view=false
 
-# JWT
-jwt.secret=VOTRE_SECRET_JWT_DE_MINIMUM_256_BITS_ICI
+# JWT — generer une cle aleatoire de 256 bits minimum
+# Commande : openssl rand -base64 64
+jwt.secret=VOTRE_CLE_JWT_ALEATOIRE_256_BITS_MINIMUM
 jwt.expiration=86400000
 
-# CORS
+# CORS — adapter selon votre front-end
 cors.allowed-origins=http://localhost:4200,http://localhost:3000
 
+# DevTools — desactiver en production
+spring.devtools.add-properties=false
+spring.devtools.livereload.enabled=false
+
 # Logging
-logging.level.com.streetworkout=DEBUG
-logging.level.org.springframework.security=DEBUG
+logging.level.com.streetworkout=INFO
+logging.level.org.springframework.security=WARN
+logging.level.org.hibernate.SQL=WARN

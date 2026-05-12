@@ -1,7 +1,9 @@
 package com.streetworkout.controller;
 
+import com.streetworkout.dto.UpdateProfileRequest;
 import com.streetworkout.dto.UserResponse;
 import com.streetworkout.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,12 +13,10 @@ import java.util.Map;
 /**
  * Controller de gestion du profil utilisateur.
  *
- * Toutes les routes nécessitent un JWT valide dans le header :
- *   Authorization: Bearer <token>
- *
  * Routes :
- *   GET  /api/users/me        → Récupérer son profil
- *   PUT  /api/users/me        → Mettre à jour son profil
+ *   GET    /api/users/me   → Recuperer son profil
+ *   PUT    /api/users/me   → Modifier son profil (poids, taille, nom, mdp)
+ *   DELETE /api/users/me   → Supprimer son compte (RGPD)
  */
 @RestController
 @RequestMapping("/api/users")
@@ -26,9 +26,12 @@ public class UserController {
     private UserService userService;
 
     /**
-     * Récupère le profil de l'utilisateur connecté.
+     * Recupere le profil de l'utilisateur connecte.
      *
-     * Réponse 200 :
+     * GET /api/users/me
+     * Authorization: Bearer <token>
+     *
+     * Reponse 200 :
      * {
      *   "id": 1,
      *   "username": "john_doe",
@@ -46,9 +49,10 @@ public class UserController {
     }
 
     /**
-     * Met à jour le profil de l'utilisateur connecté.
-     * Seuls les champs envoyés sont modifiés (PATCH partiel via PUT).
+     * Met a jour le profil de l'utilisateur connecte.
+     * Seuls les champs envoyes sont modifies (mise a jour partielle).
      *
+     * PUT /api/users/me
      * Body JSON (tous les champs sont optionnels) :
      * {
      *   "firstName": "John",
@@ -59,7 +63,23 @@ public class UserController {
      * }
      */
     @PutMapping("/me")
-    public ResponseEntity<UserResponse> updateProfile(@RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(userService.updateProfile(updates));
+    public ResponseEntity<UserResponse> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(request));
+    }
+
+    /**
+     * Supprime le compte de l'utilisateur connecte (RGPD).
+     * Supprime en cascade toutes ses donnees (workouts, progress).
+     *
+     * DELETE /api/users/me
+     *
+     * Reponse 200 :
+     * { "message": "Compte supprime avec succes" }
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<Map<String, String>> deleteAccount() {
+        userService.deleteAccount();
+        return ResponseEntity.ok(Map.of("message", "Compte supprime avec succes"));
     }
 }
