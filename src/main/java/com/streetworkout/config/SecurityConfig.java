@@ -1,6 +1,7 @@
 package com.streetworkout.config;
 
 import com.streetworkout.security.JwtAuthenticationFilter;
+import com.streetworkout.security.JwtAuthenticationEntryPoint;
 import com.streetworkout.security.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,9 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Autowired
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
@@ -64,6 +68,10 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            // Token invalide/absent → 401 (pas 403) pour que Angular redirige vers /login
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
             .headers(headers -> headers
                 .contentTypeOptions(ct -> {})
