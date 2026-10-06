@@ -2,6 +2,7 @@ package com.streetworkout.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Composant responsable de la création, validation et extraction des JWT.
@@ -22,11 +24,33 @@ public class JwtTokenProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
+    private static final int MIN_SECRET_BYTES = 32;
+    // Fragments typiques des secrets d'exemple copiés depuis la documentation
+    private static final List<String> FORBIDDEN_FRAGMENTS = List.of("votre", "changeme", "change_me", "example", "exemple");
+
     @Value("${jwt.secret}")
     private String jwtSecret;
 
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
+
+    /**
+     * Refuse de démarrer avec un secret faible ou copié d'un exemple.
+     * Un secret connu publiquement permet de forger des tokens pour n'importe quel compte.
+     */
+    @PostConstruct
+    void validateSecret() {
+        if (jwtSecret == null || jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                "jwt.secret doit faire au moins " + MIN_SECRET_BYTES + " octets (256 bits). "
+                    + "Générer : openssl rand -base64 64, puis le passer via la variable JWT_SECRET.");
+        }
+        String lower = jwtSecret.toLowerCase();
+        if (FORBIDDEN_FRAGMENTS.stream().anyMatch(lower::contains)) {
+            throw new IllegalStateException(
+                "jwt.secret ressemble à une valeur d'exemple : générer un secret aléatoire.");
+        }
+    }
 
     /**
      * Génère la clé de signature HMAC-SHA256.
