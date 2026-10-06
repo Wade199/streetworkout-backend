@@ -101,7 +101,8 @@ spring.datasource.username=postgres
 spring.datasource.password=VotreMotDePasse
 
 # JWT (changer le secret en production !)
-jwt.secret=VotreCleSuperSecreteDeMinimum256BitsIciPourJWTStreetWorkoutApplicationSecure2024
+# Générer une clé aléatoire : openssl rand -base64 64, puis la passer via la variable JWT_SECRET
+jwt.secret=${JWT_SECRET}
 jwt.expiration=86400000
 
 # CORS (adapter selon votre front-end)
