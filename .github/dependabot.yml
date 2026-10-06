@@ -1,0 +1,25 @@
+# Dependabot : mises à jour de dépendances et alertes de sécurité.
+version: 2
+updates:
+  # Dépendances Maven (pom.xml, dont le parent Spring Boot)
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # Correctifs et mineures regroupés ; les majeures restent séparées
+      maven-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Image Docker du Dockerfile (eclipse-temurin)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
