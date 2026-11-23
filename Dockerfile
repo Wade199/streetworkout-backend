@@ -3,7 +3,7 @@
 # Utilise le JAR pré-compilé localement
 # =============================================
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 
 WORKDIR /app
 
